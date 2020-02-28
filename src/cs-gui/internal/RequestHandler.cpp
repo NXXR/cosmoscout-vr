@@ -5,6 +5,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "RequestHandler.hpp"
+#include "../../cs-utils/utils.hpp"
 #include "ResourceRequestHandler.hpp"
 
 #include <fstream>
@@ -24,6 +25,28 @@ bool RequestHandler::OnCertificateError(CefRefPtr<CefBrowser> browser, cef_error
 
   callback->Continue(true);
   return true;
+}
+bool RequestHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
+    CefRefPtr<CefRequest> request, bool user_gesture, bool is_redirect) {
+
+  auto url = request->GetURL().ToString();
+
+  if (utils::startsWith(url, "http") || utils::startsWith(url, "www")) {
+    if constexpr (utils::HostOS == utils::OS::Linux) {
+      std::string command = "xdg-open " + url;
+      system(command.c_str());
+    } else if constexpr (utils::HostOS == utils::OS::Mac) {
+      std::string command = "open " + url;
+      system(command.c_str());
+    } else if constexpr (utils::HostOS == utils::OS::Windows) {
+      std::string command = "start " + url;
+      system(command.c_str());
+    }
+
+    return true;
+  }
+
+  return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

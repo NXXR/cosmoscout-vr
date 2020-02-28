@@ -101,6 +101,17 @@ float CS_UTILS_EXPORT getCurrentFarClipDistance();
 /// Executes a system command and returns the output.
 std::string exec(std::string const& cmd);
 
+enum class OS { Linux, Mac, Windows };
+
+#ifdef __linux__
+constexpr OS HostOS = OS::Linux;
+#elif __APPLE__
+constexpr OS HostOS = OS::Mac;
+#elif __WIN32
+constexpr OS HostOS = OS::Windows;
+#endif
+
+
 } // namespace cs::utils
 
 #endif // CS_UTILS_UTILS_HPP
