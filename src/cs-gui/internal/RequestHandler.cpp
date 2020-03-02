@@ -31,7 +31,10 @@ bool RequestHandler::OnBeforeBrowse(CefRefPtr<CefBrowser> browser, CefRefPtr<Cef
 
   auto url = request->GetURL().ToString();
 
+  // TODO it would be better to create a whitelist (or blacklist) of specific urls.
   if (utils::startsWith(url, "http") || utils::startsWith(url, "www")) {
+
+    // Open links in the default OS browser to avoid breaking the CosmoScout GUI.
     if constexpr (utils::HostOS == utils::OS::Linux) {
       std::string command = "xdg-open " + url;
       system(command.c_str());
