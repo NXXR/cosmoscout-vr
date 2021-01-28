@@ -6,6 +6,8 @@
 
 #include "DipStrikeTool.hpp"
 
+#include "logger.hpp"
+
 #include "../../../src/cs-core/GuiManager.hpp"
 #include "../../../src/cs-core/InputManager.hpp"
 #include "../../../src/cs-core/Settings.hpp"
@@ -107,6 +109,11 @@ DipStrikeTool::DipStrikeTool(std::shared_ptr<cs::core::InputManager> const& pInp
   mShader.InitVertexShaderFromString(SHADER_VERT);
   mShader.InitFragmentShaderFromString(SHADER_FRAG);
   mShader.Link();
+
+  mUniforms.modelViewMatrix  = mShader.GetUniformLocation("uMatModelView");
+  mUniforms.projectionMatrix = mShader.GetUniformLocation("uMatProjection");
+  mUniforms.opacity          = mShader.GetUniformLocation("uOpacity");
+  mUniforms.farClip          = mShader.GetUniformLocation("uFarClip");
 
   auto* pSG = GetVistaSystem()->GetGraphicsManager()->GetSceneGraph();
 
@@ -261,8 +268,8 @@ void DipStrikeTool::calculateDipAndStrike() {
     return;
   }
 
-  auto radii = mSolarSystem->getRadii(mGuiAnchor->getCenterName());
   auto body  = mSolarSystem->getBody(getCenterName());
+  auto radii = body->getRadii();
 
   glm::dvec3 averagePosition{0};
   for (auto const& mark : mPoints) {
@@ -290,9 +297,14 @@ void DipStrikeTool::calculateDipAndStrike() {
   // This seems to be the first time the tool is moved, so we have to store the distance to the
   // observer so that we can scale the tool later based on the observer's position.
   if (pScaleDistance.get() < 0) {
-    pScaleDistance = mSolarSystem->getObserver().getAnchorScale() *
-                     glm::length(mSolarSystem->getObserver().getRelativePosition(
-                         mTimeControl->pSimulationTime.get(), *mGuiAnchor));
+    try {
+      pScaleDistance = mSolarSystem->getObserver().getAnchorScale() *
+                       glm::length(mSolarSystem->getObserver().getRelativePosition(
+                           mTimeControl->pSimulationTime.get(), *mGuiAnchor));
+    } catch (std::exception const& e) {
+      // Getting the relative transformation may fail due to insufficient SPICE data.
+      logger().warn("Failed to calculate scale distance of Dip and Strike Tool: {}", e.what());
+    }
   }
 
   // calculate center of plane and normal
@@ -404,12 +416,10 @@ bool DipStrikeTool::Do() {
 
   mShader.Bind();
   mVAO.Bind();
-  glUniformMatrix4fv(
-      mShader.GetUniformLocation("uMatModelView"), 1, GL_FALSE, glm::value_ptr(matMV));
-  glUniformMatrix4fv(mShader.GetUniformLocation("uMatProjection"), 1, GL_FALSE, glMatP.data());
-  mShader.SetUniform(mShader.GetUniformLocation("uOpacity"), pOpacity.get());
-  mShader.SetUniform(
-      mShader.GetUniformLocation("uFarClip"), cs::utils::getCurrentFarClipDistance());
+  glUniformMatrix4fv(mUniforms.modelViewMatrix, 1, GL_FALSE, glm::value_ptr(matMV));
+  glUniformMatrix4fv(mUniforms.projectionMatrix, 1, GL_FALSE, glMatP.data());
+  mShader.SetUniform(mUniforms.opacity, pOpacity.get());
+  mShader.SetUniform(mUniforms.farClip, cs::utils::getCurrentFarClipDistance());
 
   // draw the linestrip
   glDrawArrays(GL_TRIANGLE_FAN, 0, RESOLUTION + 1);

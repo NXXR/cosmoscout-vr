@@ -13,9 +13,7 @@
 
 namespace csp::measurementtools {
 
-BreakpointTree::BreakpointTree()
-    : mRoot(nullptr) {
-}
+BreakpointTree::BreakpointTree() = default;
 
 BreakpointTree::~BreakpointTree() {
   clear(mRoot);
@@ -129,9 +127,7 @@ Breakpoint* BreakpointTree::getNearestNode(double x, Breakpoint* current) const 
 
   if (nearestChild &&
       (std::fabs(x - nearestChild->position().mX) < std::fabs(x - nearest->position().mX))) {
-    {
-      nearest = nearestChild;
-    }
+    nearest = nearestChild;
   }
 
   return nearest;

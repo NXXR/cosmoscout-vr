@@ -146,14 +146,12 @@ struct ProfileRadarData {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Sharad::Sharad(std::shared_ptr<cs::core::Settings> settings, std::string const& sCenterName,
-    std::string const& sFrameName, std::string const& sTiffFile, std::string const& sTabFile)
-    : cs::scene::CelestialObject(sCenterName, sFrameName, 0, 0)
-    , mSettings(std::move(settings))
-    , mTexture(cs::graphics::TextureLoader::loadFromFile(sTiffFile))
-    , mRadii(cs::core::SolarSystem::getRadii(sCenterName)) {
-  // arbitray date in future
-  mEndExistence = cs::utils::convert::time::toSpice("2040-01-01T00:00:00.000Z");
+Sharad::Sharad(std::shared_ptr<cs::core::Settings> settings, std::string const& anchorName,
+    std::string const& sTiffFile, std::string const& sTabFile)
+    : mSettings(std::move(settings))
+    , mTexture(cs::graphics::TextureLoader::loadFromFile(sTiffFile)) {
+
+  mSettings->initAnchor(*this, anchorName);
 
   if (mInstanceCount == 0) {
     mDepthBuffer = std::make_unique<VistaTexture>(GL_TEXTURE_RECTANGLE);
@@ -227,14 +225,14 @@ Sharad::Sharad(std::shared_ptr<cs::core::Settings> settings, std::string const& 
                 boost::posix_time::milliseconds(meta[i].Millisecond)));
 
     if (i == 0) {
-      mStartExistence = tTime;
+      mExistence[0] = tTime;
     }
 
     glm::vec2 lngLat(
         cs::utils::convert::toRadians(glm::dvec2(meta[i].Longitude, meta[i].Latitude)));
 
     float x    = 1.F * static_cast<float>(i) / (static_cast<float>(mSamples) - 1.F);
-    auto  time = static_cast<float>(tTime - mStartExistence);
+    auto  time = static_cast<float>(tTime - mExistence[0]);
 
     vertices[i * 2 + 0].lngLat = lngLat;
     vertices[i * 2 + 0].tc     = glm::vec2(x, 1.F);
@@ -263,6 +261,17 @@ Sharad::Sharad(std::shared_ptr<cs::core::Settings> settings, std::string const& 
   mShader.InitVertexShaderFromString(VERT);
   mShader.InitFragmentShaderFromString(FRAG);
   mShader.Link();
+
+  mUniforms.modelViewMatrix  = mShader.GetUniformLocation("uMatModelView");
+  mUniforms.projectionMatrix = mShader.GetUniformLocation("uMatProjection");
+  mUniforms.viewportPosition = mShader.GetUniformLocation("uViewportPos");
+  mUniforms.sharadTexture    = mShader.GetUniformLocation("uSharadTexture");
+  mUniforms.depthBuffer      = mShader.GetUniformLocation("uDepthBuffer");
+  mUniforms.sceneScale       = mShader.GetUniformLocation("uSceneScale");
+  mUniforms.heightScale      = mShader.GetUniformLocation("uHeightScale");
+  mUniforms.radii            = mShader.GetUniformLocation("uRadii");
+  mUniforms.time             = mShader.GetUniformLocation("uTime");
+  mUniforms.farClip          = mShader.GetUniformLocation("uFarClip");
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -303,26 +312,22 @@ bool Sharad::Do() {
     glGetFloatv(GL_MODELVIEW_MATRIX, glMatMV.data());
     glGetFloatv(GL_PROJECTION_MATRIX, glMatP.data());
     auto matMV = glm::make_mat4x4(glMatMV.data()) * glm::mat4(getWorldTransform());
-    glUniformMatrix4fv(
-        mShader.GetUniformLocation("uMatModelView"), 1, GL_FALSE, glm::value_ptr(matMV));
-    glUniformMatrix4fv(mShader.GetUniformLocation("uMatProjection"), 1, GL_FALSE, glMatP.data());
+    glUniformMatrix4fv(mUniforms.modelViewMatrix, 1, GL_FALSE, glm::value_ptr(matMV));
+    glUniformMatrix4fv(mUniforms.projectionMatrix, 1, GL_FALSE, glMatP.data());
 
     std::array<GLint, 4> iViewport{};
     glGetIntegerv(GL_VIEWPORT, iViewport.data());
-    mShader.SetUniform(mShader.GetUniformLocation("uViewportPos"),
-        static_cast<float>(iViewport.at(0)), static_cast<float>(iViewport.at(1)));
+    mShader.SetUniform(mUniforms.viewportPosition, static_cast<float>(iViewport.at(0)),
+        static_cast<float>(iViewport.at(1)));
 
-    mShader.SetUniform(mShader.GetUniformLocation("uSharadTexture"), 0);
-    mShader.SetUniform(mShader.GetUniformLocation("uDepthBuffer"), 1);
-    mShader.SetUniform(mShader.GetUniformLocation("uSceneScale"), static_cast<float>(mSceneScale));
-    mShader.SetUniform(
-        mShader.GetUniformLocation("uHeightScale"), mSettings->mGraphics.pHeightScale.get());
-    mShader.SetUniform(mShader.GetUniformLocation("uRadii"), static_cast<float>(mRadii[0]),
+    mShader.SetUniform(mUniforms.sharadTexture, 0);
+    mShader.SetUniform(mUniforms.depthBuffer, 1);
+    mShader.SetUniform(mUniforms.sceneScale, static_cast<float>(mSceneScale));
+    mShader.SetUniform(mUniforms.heightScale, mSettings->mGraphics.pHeightScale.get());
+    mShader.SetUniform(mUniforms.radii, static_cast<float>(mRadii[0]),
         static_cast<float>(mRadii[1]), static_cast<float>(mRadii[2]));
-    mShader.SetUniform(
-        mShader.GetUniformLocation("uTime"), static_cast<float>(mCurrTime - mStartExistence));
-    mShader.SetUniform(
-        mShader.GetUniformLocation("uFarClip"), cs::utils::getCurrentFarClipDistance());
+    mShader.SetUniform(mUniforms.time, static_cast<float>(mCurrTime - mExistence[0]));
+    mShader.SetUniform(mUniforms.farClip, cs::utils::getCurrentFarClipDistance());
 
     mTexture->Bind(GL_TEXTURE0);
     mDepthBuffer->Bind(GL_TEXTURE1);

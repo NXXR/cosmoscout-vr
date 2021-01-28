@@ -24,8 +24,8 @@ class DeepSpaceDot : public cs::scene::CelestialObject, public IVistaOpenGLDraw 
  public:
   cs::utils::Property<VistaColor> pColor = VistaColor(1, 1, 1); ///< The color of the marker.
 
-  DeepSpaceDot(std::shared_ptr<Plugin::Settings> pluginSettings, std::string const& sCenterName,
-      std::string const& sFrameName, double tStartExistence, double tEndExistence);
+  DeepSpaceDot(std::shared_ptr<Plugin::Settings> pluginSettings,
+      std::shared_ptr<cs::core::Settings> const& settings, std::string const& anchorName);
 
   DeepSpaceDot(DeepSpaceDot const& other) = delete;
   DeepSpaceDot(DeepSpaceDot&& other)      = default;
@@ -43,6 +43,14 @@ class DeepSpaceDot : public cs::scene::CelestialObject, public IVistaOpenGLDraw 
   VistaGLSLShader                   mShader;
 
   std::unique_ptr<VistaOpenGLNode> mGLNode;
+
+  struct {
+    uint32_t modelViewMatrix  = 0;
+    uint32_t projectionMatrix = 0;
+    uint32_t color            = 0;
+    uint32_t aspect           = 0;
+    uint32_t farClip          = 0;
+  } mUniforms;
 
   static const char* QUAD_VERT;
   static const char* QUAD_FRAG;

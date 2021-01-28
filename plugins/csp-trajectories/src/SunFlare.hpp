@@ -31,8 +31,7 @@ class SunFlare : public cs::scene::CelestialObject, public IVistaOpenGLDraw {
   cs::utils::Property<VistaColor> pColor = VistaColor(1, 1, 1);
 
   SunFlare(std::shared_ptr<cs::core::Settings> settings,
-      std::shared_ptr<Plugin::Settings> pluginSettings, std::string const& sCenterName,
-      std::string const& sFrameName, double tStartExistence, double tEndExistence);
+      std::shared_ptr<Plugin::Settings> pluginSettings, std::string const& anchorName);
 
   SunFlare(SunFlare const& other) = delete;
   SunFlare(SunFlare&& other)      = default;
@@ -52,6 +51,14 @@ class SunFlare : public cs::scene::CelestialObject, public IVistaOpenGLDraw {
   std::unique_ptr<VistaOpenGLNode> mGLNode;
 
   VistaGLSLShader mShader;
+
+  struct {
+    uint32_t modelViewMatrix  = 0;
+    uint32_t projectionMatrix = 0;
+    uint32_t color            = 0;
+    uint32_t aspect           = 0;
+    uint32_t farClip          = 0;
+  } mUniforms;
 
   static const char* QUAD_VERT;
   static const char* QUAD_FRAG;

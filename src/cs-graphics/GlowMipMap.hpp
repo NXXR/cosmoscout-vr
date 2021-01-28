@@ -20,7 +20,13 @@ namespace cs::graphics {
 class CS_GRAPHICS_EXPORT GlowMipMap : public VistaTexture {
  public:
   GlowMipMap(uint32_t hdrBufferSamples, int hdrBufferWidth, int hdrBufferHeight);
-  virtual ~GlowMipMap();
+  ~GlowMipMap() override;
+
+  GlowMipMap(GlowMipMap const& other) = delete;
+  GlowMipMap(GlowMipMap&& other)      = delete;
+
+  GlowMipMap& operator=(GlowMipMap const& other) = delete;
+  GlowMipMap& operator=(GlowMipMap&& other) = delete;
 
   /// Perform the glow calculation by parallel reduction of the HDR values. This is a costly
   /// operation and should only be called once a frame.
@@ -32,6 +38,11 @@ class CS_GRAPHICS_EXPORT GlowMipMap : public VistaTexture {
   int      mMaxLevels        = 0;
   int      mHDRBufferWidth   = 0;
   int      mHDRBufferHeight  = 0;
+
+  struct {
+    uint32_t level = 0;
+    uint32_t pass  = 0;
+  } mUniforms;
 
   VistaTexture* mTemporaryTarget = nullptr;
 };

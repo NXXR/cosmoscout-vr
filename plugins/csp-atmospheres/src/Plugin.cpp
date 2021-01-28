@@ -143,10 +143,9 @@ void Plugin::init() {
   mPluginSettings->mWaterLevel.connectAndTouch(
       [this](float value) { mGuiManager->setSliderValue("atmosphere.setWaterLevel", value); });
 
-  mEnableShadowsConnection = mAllSettings->mGraphics.pEnableShadows.connect([this](bool /*val*/) {
+  mEnableShadowsConnection = mAllSettings->mGraphics.pEnableShadows.connect([this](bool value) {
     for (auto const& atmosphere : mAtmospheres) {
-      if (mAllSettings->mGraphics.pEnableShadows.get() &&
-          mPluginSettings->mEnableLightShafts.get()) {
+      if (value && mPluginSettings->mEnableLightShafts.get()) {
         atmosphere.second->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
       } else {
         atmosphere.second->getRenderer().setShadowMap(nullptr);
@@ -175,10 +174,9 @@ void Plugin::init() {
         }
       });
 
-  mPluginSettings->mEnableLightShafts.connect([this](bool /*val*/) {
+  mPluginSettings->mEnableLightShafts.connect([this](bool value) {
     for (auto const& atmosphere : mAtmospheres) {
-      if (mAllSettings->mGraphics.pEnableShadows.get() &&
-          mPluginSettings->mEnableLightShafts.get()) {
+      if (mAllSettings->mGraphics.pEnableShadows.get() && value) {
         atmosphere.second->getRenderer().setShadowMap(mGraphicsEngine->getShadowMap());
       } else {
         atmosphere.second->getRenderer().setShadowMap(nullptr);
@@ -258,12 +256,7 @@ void Plugin::onLoad() {
     auto settings = mPluginSettings->mAtmospheres.find(atmosphere->first);
     if (settings != mPluginSettings->mAtmospheres.end()) {
       // If there are settings for this atmosphere, reconfigure it.
-      auto anchor                           = mAllSettings->mAnchors.find(settings->first);
-      auto [tStartExistence, tEndExistence] = anchor->second.getExistence();
-      atmosphere->second->setStartExistence(tStartExistence);
-      atmosphere->second->setEndExistence(tEndExistence);
-      atmosphere->second->setCenterName(anchor->second.mCenter);
-      atmosphere->second->setFrameName(anchor->second.mFrame);
+      mAllSettings->initAnchor(*atmosphere->second, settings->first);
       atmosphere->second->configure(settings->second);
 
       ++atmosphere;
@@ -280,18 +273,7 @@ void Plugin::onLoad() {
       continue;
     }
 
-    auto anchor = mAllSettings->mAnchors.find(settings.first);
-
-    if (anchor == mAllSettings->mAnchors.end()) {
-      throw std::runtime_error(
-          "There is no Anchor \"" + settings.first + "\" defined in the settings.");
-    }
-
-    auto [tStartExistence, tEndExistence] = anchor->second.getExistence();
-
-    auto atmosphere = std::make_shared<Atmosphere>(mPluginSettings, anchor->second.mCenter,
-        anchor->second.mFrame, tStartExistence, tEndExistence);
-
+    auto atmosphere = std::make_shared<Atmosphere>(mPluginSettings, mAllSettings, settings.first);
     atmosphere->getRenderer().setHDRBuffer(mGraphicsEngine->getHDRBuffer());
     atmosphere->configure(settings.second);
 

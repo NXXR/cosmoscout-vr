@@ -405,6 +405,9 @@ void Plugin::deInit() {
 
   mSolarSystem->pActiveBody.disconnect(mActiveBodyConnection);
 
+  mAllSettings->onLoad().disconnect(mOnLoadConnection);
+  mAllSettings->onSave().disconnect(mOnSaveConnection);
+
   mGuiManager->removePluginTab("Body Settings");
   mGuiManager->removeSettingsSection("Body Settings");
 
@@ -491,12 +494,7 @@ void Plugin::onLoad() {
     auto settings = mPluginSettings->mBodies.find(lodBody->first);
     if (settings != mPluginSettings->mBodies.end()) {
       // If there are settings for this lodBody, reconfigure it.
-      auto anchor                           = mAllSettings->mAnchors.find(settings->first);
-      auto [tStartExistence, tEndExistence] = anchor->second.getExistence();
-      lodBody->second->setStartExistence(tStartExistence);
-      lodBody->second->setEndExistence(tEndExistence);
-      lodBody->second->setCenterName(anchor->second.mCenter);
-      lodBody->second->setFrameName(anchor->second.mFrame);
+      mAllSettings->initAnchor(*lodBody->second, settings->first);
 
       setImageSource(lodBody->second, settings->second.mActiveImgDataset);
       setElevationSource(lodBody->second, settings->second.mActiveDemDataset);
@@ -518,18 +516,8 @@ void Plugin::onLoad() {
       continue;
     }
 
-    auto anchor = mAllSettings->mAnchors.find(settings.first);
-
-    if (anchor == mAllSettings->mAnchors.end()) {
-      throw std::runtime_error(
-          "There is no Anchor \"" + settings.first + "\" defined in the settings.");
-    }
-
-    auto [tStartExistence, tEndExistence] = anchor->second.getExistence();
-
     auto body = std::make_shared<LodBody>(mAllSettings, mGraphicsEngine, mSolarSystem,
-        mPluginSettings, mGuiManager, anchor->second.mCenter, anchor->second.mFrame, mGLResources,
-        tStartExistence, tEndExistence);
+        mPluginSettings, mGuiManager, mGLResources, settings.first);
 
     mLodBodies.emplace(settings.first, body);
 

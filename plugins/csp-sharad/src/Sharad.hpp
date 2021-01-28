@@ -8,6 +8,7 @@
 #define CSP_SHARAD_HPP
 
 #include "../../../src/cs-core/Settings.hpp"
+#include "../../../src/cs-core/SolarSystem.hpp"
 #include "../../../src/cs-scene/CelestialObject.hpp"
 
 #include <VistaKernel/GraphicsManager/VistaOpenGLDraw.h>
@@ -25,8 +26,8 @@ namespace csp::sharad {
 /// Renders a single SHARAD image.
 class Sharad : public cs::scene::CelestialObject, public IVistaOpenGLDraw {
  public:
-  Sharad(std::shared_ptr<cs::core::Settings> settings, std::string const& sCenterName,
-      std::string const& sFrameName, std::string const& sTiffFile, std::string const& sTabFile);
+  Sharad(std::shared_ptr<cs::core::Settings> settings, std::string const& anchorName,
+      std::string const& sTiffFile, std::string const& sTabFile);
 
   Sharad(Sharad const& other) = delete;
   Sharad(Sharad&& other)      = delete;
@@ -44,10 +45,10 @@ class Sharad : public cs::scene::CelestialObject, public IVistaOpenGLDraw {
  private:
   class FramebufferCallback : public IVistaOpenGLDraw {
    public:
-    FramebufferCallback(VistaTexture* pDepthBuffer);
+    explicit FramebufferCallback(VistaTexture* pDepthBuffer);
 
     bool Do() override;
-    bool GetBoundingBox(VistaBoundingBox& bb) override {
+    bool GetBoundingBox(VistaBoundingBox& /*bb*/) override {
       return true;
     }
 
@@ -67,7 +68,18 @@ class Sharad : public cs::scene::CelestialObject, public IVistaOpenGLDraw {
   VistaVertexArrayObject mVAO;
   VistaBufferObject      mVBO;
 
-  glm::dvec3 mRadii;
+  struct {
+    uint32_t modelViewMatrix  = 0;
+    uint32_t projectionMatrix = 0;
+    uint32_t viewportPosition = 0;
+    uint32_t sharadTexture    = 0;
+    uint32_t depthBuffer      = 0;
+    uint32_t sceneScale       = 0;
+    uint32_t heightScale      = 0;
+    uint32_t radii            = 0;
+    uint32_t time             = 0;
+    uint32_t farClip          = 0;
+  } mUniforms;
 
   int    mSamples;
   double mCurrTime   = -1.0;

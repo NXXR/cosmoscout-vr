@@ -6,6 +6,7 @@
 
 #include "DeepSpaceDot.hpp"
 
+#include "../../../src/cs-core/SolarSystem.hpp"
 #include "../../../src/cs-utils/FrameTimings.hpp"
 #include "../../../src/cs-utils/utils.hpp"
 
@@ -79,7 +80,7 @@ void main()
 const char* DeepSpaceDot::QUAD_FRAG = R"(
 #version 330
 
-uniform vec3 uCcolor;
+uniform vec3 uColor;
 uniform float uFarClip;
 
 in vec2 vTexCoords;
@@ -91,7 +92,7 @@ void main()
 {
     float dist = length(vTexCoords);
     float blob = pow(dist, 10.0);
-    oColor  = mix(vec4(uCcolor, 1.0), vec4(0), blob);
+    oColor  = mix(vec4(uColor, 1.0), vec4(0), blob);
     
     // substract a small value to prevent depth fighting with trajectories
     gl_FragDepth = fDepth / uFarClip - 0.00001;
@@ -101,14 +102,21 @@ void main()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 DeepSpaceDot::DeepSpaceDot(std::shared_ptr<Plugin::Settings> pluginSettings,
-    std::string const& sCenterName, std::string const& sFrameName, double tStartExistence,
-    double tEndExistence)
-    : cs::scene::CelestialObject(sCenterName, sFrameName, tStartExistence, tEndExistence)
-    , mPluginSettings(std::move(pluginSettings)) {
+    std::shared_ptr<cs::core::Settings> const& settings, std::string const& anchorName)
+    : mPluginSettings(std::move(pluginSettings)) {
+
+  settings->initAnchor(*this, anchorName);
+  setRadii(glm::dvec3(0.0));
 
   mShader.InitVertexShaderFromString(QUAD_VERT);
   mShader.InitFragmentShaderFromString(QUAD_FRAG);
   mShader.Link();
+
+  mUniforms.modelViewMatrix  = mShader.GetUniformLocation("uMatModelView");
+  mUniforms.projectionMatrix = mShader.GetUniformLocation("uMatProjection");
+  mUniforms.color            = mShader.GetUniformLocation("uColor");
+  mUniforms.aspect           = mShader.GetUniformLocation("uAspect");
+  mUniforms.farClip          = mShader.GetUniformLocation("uFarClip");
 
   // Add to scenegraph.
   VistaSceneGraph* pSG = GetVistaSystem()->GetGraphicsManager()->GetSceneGraph();
@@ -147,14 +155,11 @@ bool DeepSpaceDot::Do() {
 
     // draw simple dot
     mShader.Bind();
-    glUniformMatrix4fv(
-        mShader.GetUniformLocation("uMatModelView"), 1, GL_FALSE, glm::value_ptr(matMV));
-    glUniformMatrix4fv(mShader.GetUniformLocation("uMatProjection"), 1, GL_FALSE, glMatP.data());
-    mShader.SetUniform(
-        mShader.GetUniformLocation("uCcolor"), pColor.get()[0], pColor.get()[1], pColor.get()[2]);
-    mShader.SetUniform(mShader.GetUniformLocation("uAspect"), fAspect);
-    mShader.SetUniform(
-        mShader.GetUniformLocation("uFarClip"), cs::utils::getCurrentFarClipDistance());
+    glUniformMatrix4fv(mUniforms.modelViewMatrix, 1, GL_FALSE, glm::value_ptr(matMV));
+    glUniformMatrix4fv(mUniforms.projectionMatrix, 1, GL_FALSE, glMatP.data());
+    mShader.SetUniform(mUniforms.color, pColor.get()[0], pColor.get()[1], pColor.get()[2]);
+    mShader.SetUniform(mUniforms.aspect, fAspect);
+    mShader.SetUniform(mUniforms.farClip, cs::utils::getCurrentFarClipDistance());
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     mShader.Release();
 
