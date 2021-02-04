@@ -252,6 +252,15 @@ echo.
 
 cmake -E copy_directory "%EXTERNALS_DIR%/glm/glm" "%INSTALL_DIR%/include/glm" || goto :error
 
+rem spline_library --------------------------------------------------------------------------------------------
+:spline_library
+
+echo.
+echo Installing spline_library ...
+echo.
+
+cmake -E copy_directory "%EXTERNALS_DIR%/SplineLibrary/spline_library" "%INSTALL_DIR%/include/spline_library" || goto :error
+
 rem tinygltf ---------------------------------------------------------------------------------------
 :tinygltf
 
