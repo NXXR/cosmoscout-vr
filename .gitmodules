@@ -49,3 +49,6 @@
 [submodule "externals/openvr"]
 	path = externals/openvr
 	url = https://github.com/ValveSoftware/openvr.git
+[submodule "externals/libnurbs"]
+	path = externals/libnurbs
+	url = https://github.com/cosmoscout/libnurbs.git
