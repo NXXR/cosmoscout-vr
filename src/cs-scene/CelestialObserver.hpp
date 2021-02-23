@@ -8,6 +8,9 @@
 #define CS_SCENE_CELESTIAL_OBSERVER_HPP
 
 #include "../cs-utils/AnimatedValue.hpp"
+#include "../cs-core/Settings.hpp"
+#include <spline_library/splines/uniform_cubic_bspline.h>
+#include <spline_library/splines/uniform_cr_spline.h>
 #include "CelestialAnchor.hpp"
 
 namespace cs::scene {
@@ -48,12 +51,33 @@ class CS_SCENE_EXPORT CelestialObserver : public CelestialAnchor {
       glm::dvec3 const& position, glm::dquat const& rotation, double dSimulationTime,
       double dRealStartTime, double dRealEndTime);
 
+  /*
+  /// Gradually moves the observer's position and rotation from their current values to the given
+  /// values.
+  ///
+  /// @param sCenterName      The SPICE name of the targets center.
+  /// @param sFrameName       The SPICE reference frame of the targets location.
+  /// @param controlpoints    The control points of the movement curve in the targets coordinate system.
+  /// @param rotation         The target rotation in the targets coordinate system.
+  /// @param dSimulationTime  The current time of the simulation in Barycentric Dynamical Time.
+  /// @param dRealStartTime   The time in the real world, when the animation should start, in TDB.
+  /// @param dRealEndTime     The time in the real world, when the animation should finish, in TDB.
+  void moveTo(std::string const& sCenterName, std::string const& sFrameName,
+              std::vector<glm::dvec3> const& controlpoints, glm::dquat const& rotation, double dSimulationTime,
+              double dRealStartTime, double dRealEndTime);
+  */
+
   /// @return true, if the observer is currently being moved.
   bool isAnimationInProgress() const;
 
  protected:
+  utils::AnimatedValue<double> mAnimatedT;
+  std::shared_ptr<UniformCubicBSpline<glm::dvec3, double>> mMoveSpline;
+  std::shared_ptr<glm::dvec3> mUpDirection;
+  std::shared_ptr<glm::dvec3> mLookAtPoint;
   utils::AnimatedValue<glm::dvec3> mAnimatedPosition;
   utils::AnimatedValue<glm::dquat> mAnimatedRotation;
+  utils::AnimatedValue<glm::dquat> mAnimatedRotationFinal;
 
   bool mAnimationInProgress = false;
 };

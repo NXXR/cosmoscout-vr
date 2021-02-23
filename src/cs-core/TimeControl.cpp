@@ -58,7 +58,7 @@ TimeControl::~TimeControl() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void TimeControl::update() {
+void TimeControl::update(bool isPaused) {
 
   double now = utils::convert::time::toSpice(boost::posix_time::microsec_clock::universal_time());
 
@@ -93,7 +93,8 @@ void TimeControl::update() {
     if (mAnimatedTime.mEndTime < now) {
       mAnimationInProgress = false;
     }
-  } else {
+  }
+  else if (!isPaused){
     double tTime = pSimulationTime.get() + (now - mLastUpdate) * pTimeSpeed.get();
     if (tTime >= pMaxDate || tTime <= pMinDate) {
       pSimulationTime = std::clamp(tTime, pMinDate, pMaxDate);

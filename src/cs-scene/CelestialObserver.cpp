@@ -5,8 +5,8 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "CelestialObserver.hpp"
-
 #include "logger.hpp"
+#include <glm/ext.hpp>
 
 namespace cs::scene {
 
@@ -20,10 +20,25 @@ CelestialObserver::CelestialObserver(std::string const& sCenterName, std::string
 
 void CelestialObserver::updateMovementAnimation(double tTime) {
   if (mAnimationInProgress) {
-    mPosition = mAnimatedPosition.get(tTime);
-    mRotation = mAnimatedRotation.get(tTime);
+    // mPosition = mAnimatedPosition.get(tTime);
+    mPosition = mMoveSpline->getPosition(mAnimatedT.get(tTime));
 
-    if (mAnimatedPosition.mEndTime < tTime) {
+    if (tTime < mAnimatedRotation.mEndTime) {
+      // rotation to look-at point not done yet
+      mRotation = mAnimatedRotation.get(tTime);
+    }
+    else if (tTime > mAnimatedRotationFinal.mStartTime) {
+      // rotation to final direction started
+      mRotation = mAnimatedRotationFinal.get(tTime);
+    }
+    else {
+      // observer is moving along spline -> adjust rotation towards look-at point
+      auto direction = glm::normalize(*mLookAtPoint - mPosition);
+      mRotation      = glm::quatLookAt(glm::normalize(direction), glm::normalize(*mUpDirection));
+
+    }
+
+    if (mAnimatedRotationFinal.mEndTime < tTime) {
       mAnimationInProgress = false;
     }
   }
@@ -99,11 +114,39 @@ void CelestialObserver::moveTo(std::string const& sCenterName, std::string const
       setAnchorRotation(startRot);
       setAnchorPosition(startPos);
 
-      mAnimatedPosition = utils::AnimatedValue<glm::dvec3>(
-          startPos, position, dRealStartTime, dRealEndTime, utils::AnimationDirection::eInOut);
+      // normalize Origin-Target-Vector to calculate start control points
+      glm::dvec3 normalizedOT = glm::normalize(position - startPos);
 
-      mAnimatedRotation = utils::AnimatedValue<glm::dquat>(
-          startRot, rotation, dRealStartTime, dRealEndTime, utils::AnimationDirection::eInOut);
+      // generate look-at point and vector for final rotation
+      mLookAtPoint = std::make_shared<glm::dvec3>(position + normalizedOT);
+
+      // calculate up direction
+      glm::dvec3 upDir = glm::dvec3(0.0, 1.0, 0.0);
+      upDir = glm::rotate(rotation, upDir);
+      mUpDirection = std::make_shared<glm::dvec3>(upDir);
+
+      // create quat for rotation onto OT direction
+      glm::dquat rotationOT = glm::quatLookAt(normalizedOT, upDir);
+
+      // set spline Control Points
+      std::vector<glm::dvec3> splinePoints = {startPos - normalizedOT, startPos,
+          startPos + normalizedOT, position - normalizedOT, position, position + normalizedOT};
+      mMoveSpline = std::make_shared<UniformCubicBSpline<glm::dvec3, double>>(splinePoints);
+
+      // Rotation before translation
+      auto duration = dRealEndTime - dRealStartTime;
+
+      mAnimatedT =
+          utils::AnimatedValue<double>(0, mMoveSpline->getMaxT(), dRealStartTime + (duration / 4),
+              dRealEndTime - (duration / 4), utils::AnimationDirection::eInOut);
+
+      // start rotation onto OT vector
+      mAnimatedRotation = utils::AnimatedValue<glm::dquat>(startRot, rotationOT, dRealStartTime,
+          dRealStartTime + (duration / 4), utils::AnimationDirection::eInOut);
+
+      // final rotation onto look-at vector
+      mAnimatedRotationFinal = utils::AnimatedValue<glm::dquat>(rotationOT, rotation,
+          dRealEndTime - (duration / 4), dRealEndTime, utils::AnimationDirection::eInOut);
 
       mAnimationInProgress = true;
     } catch (std::exception const& e) {

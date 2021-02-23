@@ -40,7 +40,7 @@ class CS_CORE_EXPORT TimeControl {
 
   /// Updates the simulation time based on the current time speed. This is called once a frame by
   /// the application class, there is no need to call this somewhere else.
-  void update();
+  void update(bool isPaused);
 
   /// Set the simulation time to a specific point in time. The TimeControl class smoothly transition
   /// to that point in time, if it is closer to the current simulation time than the given

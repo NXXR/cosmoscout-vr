@@ -456,7 +456,7 @@ void Application::FrameUpdate() {
     {
       cs::utils::FrameTimings::ScopedTimer timer(
           "TimeControl Update", cs::utils::FrameTimings::QueryMode::eCPU);
-      mTimeControl->update();
+      mTimeControl->update(mSolarSystem->getObserver().isAnimationInProgress());
     }
 
     // Update the navigation, SolarSystem and scene scale.
