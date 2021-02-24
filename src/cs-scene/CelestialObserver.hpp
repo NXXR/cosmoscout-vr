@@ -7,11 +7,13 @@
 #ifndef CS_SCENE_CELESTIAL_OBSERVER_HPP
 #define CS_SCENE_CELESTIAL_OBSERVER_HPP
 
-#include "../cs-utils/AnimatedValue.hpp"
 #include "../cs-core/Settings.hpp"
-#include <spline_library/splines/uniform_cubic_bspline.h>
-#include <spline_library/splines/uniform_cr_spline.h>
+#include "../cs-utils/AnimatedValue.hpp"
 #include "CelestialAnchor.hpp"
+#include <queue>
+#include <spline_library/splines/uniform_cr_spline.h>
+#include <spline_library/splines/uniform_cubic_bspline.h>
+#include <variant>
 
 namespace cs::scene {
 
@@ -22,6 +24,20 @@ class CS_SCENE_EXPORT CelestialObserver : public CelestialAnchor {
  public:
   explicit CelestialObserver(std::string const& sCenterName = "Solar System Barycenter",
       std::string const&                        FrameName   = "J2000");
+
+  // Movement Description Structs:
+  struct defaultPoint2Point {
+    std::string const& sTargetCenterName;
+    std::string const& sTargetFrameName;
+    glm::dvec3 const& finalPosition;
+    glm::dquat const& finalRotation;
+    double dSimulationTime;
+    double dRealStartTime;
+    double dRealEndTime;
+  };
+
+  // Variant to bundle movement descriptions
+  using movementDescription_t = std::variant<defaultPoint2Point>;
 
   /// Updates position and rotation according to the last moveTo call.
   virtual void updateMovementAnimation(double tTime);
@@ -51,21 +67,23 @@ class CS_SCENE_EXPORT CelestialObserver : public CelestialAnchor {
       glm::dvec3 const& position, glm::dquat const& rotation, double dSimulationTime,
       double dRealStartTime, double dRealEndTime);
 
-  /*
   /// Gradually moves the observer's position and rotation from their current values to the given
   /// values.
   ///
-  /// @param sCenterName      The SPICE name of the targets center.
-  /// @param sFrameName       The SPICE reference frame of the targets location.
-  /// @param controlpoints    The control points of the movement curve in the targets coordinate system.
-  /// @param rotation         The target rotation in the targets coordinate system.
-  /// @param dSimulationTime  The current time of the simulation in Barycentric Dynamical Time.
-  /// @param dRealStartTime   The time in the real world, when the animation should start, in TDB.
-  /// @param dRealEndTime     The time in the real world, when the animation should finish, in TDB.
-  void moveTo(std::string const& sCenterName, std::string const& sFrameName,
-              std::vector<glm::dvec3> const& controlpoints, glm::dquat const& rotation, double dSimulationTime,
-              double dRealStartTime, double dRealEndTime);
-  */
+  /// @param moveDescriptionP2P   The Point2Point movement description struct.
+  void moveTo(defaultPoint2Point const& moveDescriptionP2P);
+
+  /// Gradually moves the observer's position and rotation from their current values to the given
+  /// values.
+  ///
+  /// @param moveDescriptionP2P   Any movement description struct.
+  void moveTo(movementDescription_t const& moveDescription);
+
+  /// Gradually moves the observer's position and rotation from their current values to the given
+  /// values.
+  ///
+  /// @param moveDescription   The queue of movement description structs.
+  void moveTo(std::queue<movementDescription_t> moveDescriptionsQueue);
 
   /// @return true, if the observer is currently being moved.
   bool isAnimationInProgress() const;
@@ -78,6 +96,8 @@ class CS_SCENE_EXPORT CelestialObserver : public CelestialAnchor {
   utils::AnimatedValue<glm::dvec3> mAnimatedPosition;
   utils::AnimatedValue<glm::dquat> mAnimatedRotation;
   utils::AnimatedValue<glm::dquat> mAnimatedRotationFinal;
+
+  std::unique_ptr<std::queue<movementDescription_t>> mMovementQueue;
 
   bool mAnimationInProgress = false;
 };
