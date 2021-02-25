@@ -14,6 +14,7 @@ namespace cs::scene {
 
 CelestialObserver::CelestialObserver(std::string const& sCenterName, std::string const& sFrameName)
     : CelestialAnchor(sCenterName, sFrameName) {
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -40,9 +41,9 @@ void CelestialObserver::updateMovementAnimation(double tTime) {
 
     if (mAnimatedRotationFinal.mEndTime < tTime) {
       mAnimationInProgress = false;
-      if (!mMovementQueue->empty()){
-        moveTo(mMovementQueue->front());
-        mMovementQueue->pop();
+      if (!mMovementQueue.empty()){
+        moveTo(mMovementQueue.front());
+        mMovementQueue.pop();
       }
     }
   }
@@ -209,14 +210,14 @@ void CelestialObserver::moveTo(const CelestialObserver::movementDescription_t& m
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void CelestialObserver::moveTo(std::queue<movementDescription_t> moveDescriptionsQueue) {
+void CelestialObserver::moveTo(std::queue<movementDescription_t>&& moveDescriptionsQueue) {
   // make sure queue contains at least one element
   if (!moveDescriptionsQueue.empty()) {
     // swap new movements into queue
-    mMovementQueue->swap(moveDescriptionsQueue);
+    mMovementQueue = std::move(moveDescriptionsQueue);
     // execute first movement instruction
-    moveTo(mMovementQueue->front());
-    mMovementQueue->pop();
+    moveTo(mMovementQueue.front());
+    mMovementQueue.pop();
   }
 }
 

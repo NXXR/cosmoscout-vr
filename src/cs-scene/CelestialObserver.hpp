@@ -83,7 +83,7 @@ class CS_SCENE_EXPORT CelestialObserver : public CelestialAnchor {
   /// values.
   ///
   /// @param moveDescription   The queue of movement description structs.
-  void moveTo(std::queue<movementDescription_t> moveDescriptionsQueue);
+  void moveTo(std::queue<movementDescription_t>&& moveDescriptionsQueue);
 
   /// @return true, if the observer is currently being moved.
   bool isAnimationInProgress() const;
@@ -97,7 +97,7 @@ class CS_SCENE_EXPORT CelestialObserver : public CelestialAnchor {
   utils::AnimatedValue<glm::dquat> mAnimatedRotation;
   utils::AnimatedValue<glm::dquat> mAnimatedRotationFinal;
 
-  std::unique_ptr<std::queue<movementDescription_t>> mMovementQueue;
+  std::queue<movementDescription_t> mMovementQueue{};
 
   bool mAnimationInProgress = false;
 };
