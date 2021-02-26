@@ -34,7 +34,6 @@ class AnimatedValue {
   AnimationDirection mDirection = AnimationDirection::eInOut;
   double             mExponent  = 0.0;
 
-  /// DocTODO why would anyone create an AnimatedValue, with the same value for start and end?
   explicit AnimatedValue(T const& val = T{})
       : mStartValue(val)
       , mEndValue(val) {
