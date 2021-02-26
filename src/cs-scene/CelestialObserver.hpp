@@ -27,10 +27,10 @@ class CS_SCENE_EXPORT CelestialObserver : public CelestialAnchor {
 
   // Movement Description Structs:
   struct defaultPoint2Point {
-    std::string const& sTargetCenterName;
-    std::string const& sTargetFrameName;
-    glm::dvec3 const& finalPosition;
-    glm::dquat const& finalRotation;
+    std::string sTargetCenterName;
+    std::string sTargetFrameName;
+    glm::dvec3 finalPosition;
+    glm::dquat finalRotation;
     double dSimulationTime;
     double dRealStartTime;
     double dRealEndTime;

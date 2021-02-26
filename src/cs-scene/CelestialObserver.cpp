@@ -160,8 +160,8 @@ void CelestialObserver::moveTo(std::string const& sCenterName, std::string const
       // calculate duration from start & end time to divide into rotations and translation
       double duration = dRealEndTime - dRealStartTime;
       // start & end rotation maximum duration = 1/3, if duration = 0, set it to 0.1s to avoid errors with animatedValue
-      double durationStartRot = weightStart > 0.0 ? (1.0/3.0) * weightStart * duration : 0.1;
-      double durationFinalRot = weightFinal > 0.0 ? (1.0/3.0) * weightFinal * duration : 0.1;
+      double durationStartRot = (1.0/3.0) * weightStart * duration;
+      double durationFinalRot = (1.0/3.0) * weightFinal * duration;
 
       logger().info("overall duration: {}", duration);
       logger().info("duration for rotations: start rotation = {} ; end rotation = {}", durationStartRot, durationFinalRot);
