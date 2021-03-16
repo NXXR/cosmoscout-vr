@@ -15,6 +15,7 @@
 #include "Settings.hpp"
 #include "TimeControl.hpp"
 #include "logger.hpp"
+#include "../cs-scene/CelestialObserver.hpp"
 
 #include <VistaDataFlowNet/VdfnObjectRegistry.h>
 #include <VistaKernel/Cluster/VistaClusterMode.h>
@@ -422,13 +423,95 @@ void SolarSystem::updateObserverFrame() {
 void SolarSystem::flyObserverTo(std::string const& sCenter, std::string const& sFrame,
     glm::dvec3 const& position, glm::dquat const& rotation, double duration) {
 
-  double simulationTime(mTimeControl->pSimulationTime.get());
-  double startTime(
-      utils::convert::time::toSpice(boost::posix_time::microsec_clock::universal_time()));
-  double endTime(startTime + duration);
-
   if (GetVistaSystem()->GetClusterMode()->GetIsLeader()) {
-    mObserver.moveTo(sCenter, sFrame, position, rotation, simulationTime, startTime, endTime);
+
+    // check if same frame/center
+    bool isSameFrame = mObserver.getFrameName() == sFrame;
+    bool isSameCenter = mObserver.getCenterName() == sCenter;
+
+    // check current position within "surface" threshold
+    glm::vec3 radii = getRadii(mObserver.getCenterName());
+    double maxrad = glm::max(glm::max(radii[0], radii[1]), radii[2]);
+    bool isOnOriginSurface = glm::length(mObserver.getAnchorPosition()) < (maxrad * 1.1);
+
+    // check final position within "surface" threshold
+    radii = getRadii(sCenter);
+    maxrad = glm::max(glm::max(radii[0], radii[1]), radii[2]);
+    bool isOnTargetSurface = glm::length(position) < (maxrad * 1.1);
+
+
+    double simulationTime(mTimeControl->pSimulationTime.get());
+    double startTime(
+        utils::convert::time::toSpice(boost::posix_time::microsec_clock::universal_time()));
+    double endTime(startTime + duration);
+
+
+    // setup queue
+    std::queue<scene::CelestialObserver::MovementDescription> movementQueue;
+
+    // insert ascend if necessary
+    if (isOnOriginSurface){
+      // insert surface2orbit into queue
+    }
+
+    if (isSameFrame && isSameCenter){
+      scene::CelestialObserver::defaultOrbit move{};
+      move.sTargetFrameName = sFrame;
+      move.finalPosition = position;
+      move.finalRotation = rotation;
+      move.dRealStartTime = startTime;
+      move.dRealEndTime = endTime;
+      movementQueue.push(move);
+      startTime = move.dRealEndTime;
+      endTime = startTime + duration;
+    }
+    else if (!isSameFrame && isSameCenter){
+      // different frame but same center -> defaultOrbit & frame change
+      // construct and add frame change
+      scene::CelestialObserver::defaultPoint2Point frameShift{};
+      frameShift.sTargetCenterName = sCenter;
+      frameShift.sTargetFrameName = sFrame;
+      frameShift.finalPosition = mObserver.getAnchorPosition();
+      frameShift.finalRotation = mObserver.getAnchorRotation();
+      frameShift.dSimulationTime = simulationTime;
+      frameShift.dRealStartTime = startTime;
+      frameShift.dRealEndTime = startTime+1;
+      movementQueue.push(frameShift);
+      startTime = frameShift.dRealEndTime;
+      endTime = startTime + duration;
+      // construct and add defaultOrbit
+      scene::CelestialObserver::defaultOrbit orbitMove{};
+      orbitMove.sTargetFrameName = sFrame;
+      orbitMove.finalPosition = position;
+      orbitMove.finalRotation = rotation;
+      orbitMove.dRealStartTime = startTime;
+      orbitMove.dRealEndTime = endTime;
+      movementQueue.push(orbitMove);
+      startTime = orbitMove.dRealEndTime;
+      endTime = startTime + duration;
+    }
+    else {
+      // TODO: defaultOrbit -> P2P -> defaultOrbit
+      scene::CelestialObserver::defaultPoint2Point p2p{};
+      p2p.sTargetFrameName = sFrame;
+      p2p.sTargetCenterName = sCenter;
+      p2p.finalPosition = position;
+      p2p.finalRotation = rotation;
+      p2p.dSimulationTime = simulationTime;
+      p2p.dRealStartTime = startTime;
+      p2p.dRealEndTime = endTime;
+      movementQueue.push(p2p);
+      startTime = p2p.dRealEndTime;
+      endTime = startTime + duration;
+    }
+
+    // append descend if necessary
+    if (isOnTargetSurface){
+      // insert orbit2surface into queue
+    }
+
+    logger().info("MoveParam -- Center:'{}'; Frame:'{}'", sCenter, sFrame);
+    mObserver.moveTo(movementQueue);
   }
 }
 

@@ -36,8 +36,17 @@ class CS_SCENE_EXPORT CelestialObserver : public CelestialAnchor {
     double dRealEndTime;
   };
 
+  struct defaultOrbit {
+    std::string sTargetFrameName;
+    glm::dvec3 finalPosition;
+    glm::dquat finalRotation;
+    double dSimulationTime;
+    double dRealStartTime;
+    double dRealEndTime;
+  };
+
   // Variant to bundle movement descriptions
-  using movementDescription_t = std::variant<defaultPoint2Point>;
+  using MovementDescription = std::variant<defaultPoint2Point,defaultOrbit>;
 
   /// Updates position and rotation according to the last moveTo call.
   virtual void updateMovementAnimation(double tTime);
@@ -70,20 +79,26 @@ class CS_SCENE_EXPORT CelestialObserver : public CelestialAnchor {
   /// Gradually moves the observer's position and rotation from their current values to the given
   /// values.
   ///
-  /// @param moveDescriptionP2P   The Point2Point movement description struct.
+  /// @param moveDescriptionP2P   The defaultPoint2Point movement description struct.
   void moveTo(defaultPoint2Point const& moveDescriptionP2P);
 
   /// Gradually moves the observer's position and rotation from their current values to the given
   /// values.
   ///
+  /// @param moveDescriptionOrbit   The defaultOrbit movement description struct.
+  void moveTo(defaultOrbit const& moveDescriptionOrbit);
+
+  /// Gradually moves the observer's position and rotation from their current values to the given
+  /// values.
+  ///
   /// @param moveDescriptionP2P   Any movement description struct.
-  void moveTo(movementDescription_t const& moveDescription);
+  void moveTo(MovementDescription const& moveDescription);
 
   /// Gradually moves the observer's position and rotation from their current values to the given
   /// values.
   ///
   /// @param moveDescription   The queue of movement description structs.
-  void moveTo(std::queue<movementDescription_t>&& moveDescriptionsQueue);
+  void moveTo(std::queue<MovementDescription>const & moveDescriptionsQueue);
 
   /// @return true, if the observer is currently being moved.
   bool isAnimationInProgress() const;
@@ -94,10 +109,10 @@ class CS_SCENE_EXPORT CelestialObserver : public CelestialAnchor {
   std::shared_ptr<glm::dvec3> mUpDirection;
   std::shared_ptr<glm::dvec3> mLookAtPoint;
   utils::AnimatedValue<glm::dvec3> mAnimatedPosition;
-  utils::AnimatedValue<glm::dquat> mAnimatedRotation;
+  utils::AnimatedValue<glm::dquat> mAnimatedRotationStart;
   utils::AnimatedValue<glm::dquat> mAnimatedRotationFinal;
 
-  std::queue<movementDescription_t> mMovementQueue{};
+  std::queue<MovementDescription> mMovementQueue{};
 
   bool mAnimationInProgress = false;
 };
