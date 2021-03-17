@@ -242,7 +242,8 @@ void CelestialObserver::moveTo(const CelestialObserver::defaultOrbit& moveDescri
           glm::normalize(glm::triangleNormal(glm::dvec3(0.0, 0.0, 0.0), startPos, finalPos));
 
       // calculate angle between origin & target
-      double angleOT = glm::orientedAngle(startPos, finalPos, normalOT);
+      double angleOT =
+          glm::orientedAngle(glm::normalize(startPos), glm::normalize(finalPos), normalOT);
 
       // calculate control points in 2D (on origin-target-plane) and with unit circle
       // according to https://pomax.github.io/bezierinfo/#circles_cubic
@@ -254,8 +255,8 @@ void CelestialObserver::moveTo(const CelestialObserver::defaultOrbit& moveDescri
           glm::cos(angleOT) + f * glm::sin(angleOT), glm::sin(angleOT) - f * glm::cos(angleOT));
 
       // calculate angle between start/end point and control points
-      double angleS_C1 = glm::angle(s_pos, c_1);
-      double angleE_C2 = glm::angle(e_pos, c_2);
+      double angleS_C1 = glm::orientedAngle(glm::normalize(s_pos), glm::normalize(c_1));
+      double angleE_C2 = glm::orientedAngle(glm::normalize(e_pos), glm::normalize(c_2));
 
       // rotate start pos by angle and scale by 2D length
       glm::dvec3 c1Pos  = glm::rotate(startPos, angleS_C1, normalOT) * glm::length(c_1);
