@@ -219,7 +219,6 @@ void CelestialObserver::moveTo(const CelestialObserver::defaultOrbit& moveDescri
         startPos = iauFrame.getRelativePosition(moveDescriptionOrbit.dSimulationTime, *this);
         startRot = iauFrame.getRelativeRotation(moveDescriptionOrbit.dSimulationTime, *this);
         setFrameName("IAU_" + getCenterName());
-        isCurrentIAU = true;
         // adjust position
         setAnchorRotation(startRot);
         setAnchorPosition(startPos);
