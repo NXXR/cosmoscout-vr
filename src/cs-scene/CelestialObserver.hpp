@@ -106,8 +106,8 @@ class CS_SCENE_EXPORT CelestialObserver : public CelestialAnchor {
  protected:
   utils::AnimatedValue<double> mAnimatedT;
   std::shared_ptr<UniformCubicBSpline<glm::dvec3, double>> mMoveSpline;
-  std::shared_ptr<glm::dvec3> mUpDirection;
-  std::shared_ptr<glm::dvec3> mLookAtPoint;
+  glm::dvec3 mUpDirection{};
+  glm::dvec3 mLookAtPoint{};
   utils::AnimatedValue<glm::dvec3> mAnimatedPosition;
   utils::AnimatedValue<glm::dquat> mAnimatedRotationStart;
   utils::AnimatedValue<glm::dquat> mAnimatedRotationFinal;

@@ -31,8 +31,8 @@ void CelestialObserver::updateMovementAnimation(double tTime) {
       mRotation = mAnimatedRotationFinal.get(tTime);
     } else {
       // observer is moving along spline -> adjust rotation towards look-at point
-      auto direction = glm::normalize(*mLookAtPoint - mPosition);
-      mRotation      = glm::quatLookAt(glm::normalize(direction), glm::normalize(*mUpDirection));
+      auto direction = glm::normalize(mLookAtPoint - mPosition);
+      mRotation      = glm::quatLookAt(direction, mUpDirection);
     }
 
     if (mAnimatedRotationFinal.mEndTime < tTime) {
@@ -119,12 +119,11 @@ void CelestialObserver::moveTo(std::string const& sCenterName, std::string const
       glm::dvec3 normalizedOT = glm::normalize(position - startPos);
 
       // generate look-at point and vector for final rotation
-      mLookAtPoint = std::make_shared<glm::dvec3>(position + normalizedOT);
+      mLookAtPoint = (position + normalizedOT);
 
       // calculate up direction
       glm::dvec3 upDir = glm::dvec3(0.0, 1.0, 0.0);
-      upDir            = glm::rotate(rotation, upDir);
-      mUpDirection     = std::make_shared<glm::dvec3>(upDir);
+      mUpDirection = glm::normalize(glm::rotate(rotation, upDir));
 
       // create quat for rotation onto OT direction
       glm::dquat rotationOT = glm::quatLookAt(normalizedOT, upDir);
@@ -291,10 +290,9 @@ void CelestialObserver::moveTo(const CelestialObserver::defaultOrbit& moveDescri
       if (isTargetFrameDifferent) {
         CelestialAnchor targetFrame(getCenterName(), moveDescriptionOrbit.sTargetFrameName);
         CelestialAnchor iauCenter(getCenterName(), "IAU_" + getCenterName());
-        mLookAtPoint = std::make_shared<glm::dvec3>(
-            targetFrame.getRelativePosition(moveDescriptionOrbit.dSimulationTime, iauCenter));
+        mLookAtPoint = targetFrame.getRelativePosition(moveDescriptionOrbit.dSimulationTime, iauCenter);
       } else {
-        mLookAtPoint = std::make_shared<glm::dvec3>(0.0, 0.0, 0.0);
+        mLookAtPoint = glm::dvec3(0.0, 0.0, 0.0);
       }
 
       // create spline
@@ -302,7 +300,7 @@ void CelestialObserver::moveTo(const CelestialObserver::defaultOrbit& moveDescri
       mMoveSpline = std::make_shared<UniformCubicBSpline<glm::dvec3, double>>(splinePoints);
 
       // calculate up direction
-      mUpDirection = std::make_shared<glm::dvec3>(glm::rotate(startRot, glm::dvec3(0.0, 1.0, 0.0)));
+      mUpDirection = glm::normalize(glm::rotate(startRot, glm::dvec3(0.0, 1.0, 0.0)));
 
       // calculate rotation durations
       glm::dvec3 startDirection      = glm::rotate(startRot, glm::dvec3(0.0, 0.0, -1.0));
@@ -333,12 +331,13 @@ void CelestialObserver::moveTo(const CelestialObserver::defaultOrbit& moveDescri
               endTime - durationFinalRot, utils::AnimationDirection::eInOut);
 
       // set animation for start rotation
-      glm::dquat lookAtCenter = glm::quatLookAt(*mLookAtPoint - startPos, *mUpDirection);
+      glm::dquat lookAtCenter = glm::quatLookAt(glm::normalize(mLookAtPoint - startPos), mUpDirection);
       mAnimatedRotationStart  = utils::AnimatedValue<glm::dquat>(startRot, lookAtCenter, startTime,
           startTime + durationStartRot, utils::AnimationDirection::eInOut);
 
       // set animation for final rotation
-      lookAtCenter           = glm::quatLookAt(*mLookAtPoint - finalPos, *mUpDirection);
+      lookAtCenter           = glm::quatLookAt(glm::normalize(mLookAtPoint - finalPos), mUpDirection);
+      logger().info("Final Rot: {}; dir: {}; up: {}", glm::to_string(lookAtCenter), glm::to_string(mLookAtPoint-finalPos), glm::to_string(mUpDirection));
       mAnimatedRotationFinal = utils::AnimatedValue<glm::dquat>(lookAtCenter, finalRot,
           endTime - durationFinalRot, endTime, utils::AnimationDirection::eInOut);
 
